@@ -1,0 +1,20 @@
+import TourImage from '@/app/tour-image';
+import Link from 'next/link';
+import {notFound} from 'next/navigation';
+import {categoryName, plain, safeImage, tour} from '@/lib/tour';
+
+export const dynamic = 'force-dynamic';
+export default async function Place({params}: {params: Promise<{id: string}>}) {
+  const {id} = await params;
+  if (!/^\d{1,12}$/.test(id)) notFound();
+  let result;
+  try {result = await tour('detailCommon2', {contentId: id});} catch (error) {return <main id="main" className="detail"><div className="empty" role="alert"><h1>無法載入資訊。</h1><p>{error instanceof Error ? error.message : '請稍後再試。'}</p><a href={`/places/${id}`}>重試 →</a><Link href="/">返回景點列表</Link></div></main>;}
+  const item = result.items[0];
+  if (!item) notFound();
+  const [intro, images, extra] = await Promise.allSettled([tour('detailIntro2', {contentId: id, contentTypeId: item.contenttypeid}), tour('detailImage2', {contentId: id, imageYN: 'Y', numOfRows: '8'}), tour('detailInfo2', {contentId: id, contentTypeId: item.contenttypeid})]);
+  const info = intro.status === 'fulfilled' ? intro.value.items[0] || {} : {};
+  const fields = [['開放時間', info.usetime || info.usetimeculture || info.opentimefood || info.opentime || info.usetimeleports], ['公休日', info.restdate || info.restdateculture || info.restdatefood || info.restdateshopping || info.restdateleports], ['聯絡方式', item.tel || info.infocenter || info.infocenterculture || info.infocenterfood || info.infocenterlodging || info.infocentershopping || info.infocenterleports], ['費用', info.usefee || info.usefeeleports || info.usetimefestival], ['入住／退房', [info.checkintime, info.checkouttime].filter(Boolean).join(' / ')], ['活動期間', [info.eventstartdate, info.eventenddate].filter(Boolean).join(' ~ ')], ['招牌餐點', info.firstmenu], ['停車資訊', info.parking || info.parkingculture || info.parkingfood || info.parkinglodging]];
+  const latitude = Number(item.mapy), longitude = Number(item.mapx);
+  const hasMap = Number.isFinite(latitude) && Number.isFinite(longitude) && latitude > 0 && latitude <= 90 && longitude > 0 && longitude <= 180;
+  return <main id="main" className="detail"><Link className="back" href="/#explore">← 探索景點</Link><p className="eyebrow green">{categoryName(item.contenttypeid)} · 探索韓國</p><h1 lang="zh-Hant">{plain(item.title)}</h1><p className="detail-address" lang="zh-Hant">{item.addr1} {item.addr2}</p>{safeImage(item.firstimage) && <TourImage className="detail-cover" src={safeImage(item.firstimage)} alt={plain(item.title)}/>}<div className="detail-columns"><article><h2>景點介紹</h2><p className="overview" lang="zh-Hant">{plain(item.overview) || '目前尚無景點介紹。'}</p>{extra.status === 'fulfilled' && extra.value.items.filter(row => row.infoname && row.infotext).map((row, index) => <section className="extra-info" key={index} lang="zh-Hant"><h3>{plain(row.infoname)}</h3><p className="overview">{plain(row.infotext)}</p></section>)}</article><aside className="info-box"><h2>行前須知</h2><dl>{fields.filter(([, value]) => value).map(([name, value]) => <div key={name}><dt>{name}</dt><dd lang="zh-Hant">{plain(value)}</dd></div>)}</dl>{fields.every(([, value]) => !value) && <p>目前尚無參觀資訊。</p>}{hasMap && <a className="map-link" href={`https://www.google.com/maps?q=${latitude},${longitude}`} target="_blank" rel="noopener noreferrer">在地圖上查看位置 ↗</a>}<small>出發前請再次確認營業時間及費用。</small></aside></div>{[intro, images, extra].some(result => result.status === 'rejected') && <p className="source-note">部分資訊無法載入，請重新整理頁面。</p>}{images.status === 'fulfilled' && images.value.items.length > 0 && <section className="gallery"><h2>搶先欣賞風景</h2><div>{images.value.items.filter(image => safeImage(image.originimgurl)).map((image, index) => <figure key={index}><TourImage src={safeImage(image.originimgurl)} alt={plain(image.imgname) || `${plain(item.title)} 照片 ${index + 1}`} loading="lazy"/><figcaption>{plain(image.imgname)} {image.cpyrhtDivCd && `· 韓國公共著作授權 ${image.cpyrhtDivCd}`}</figcaption></figure>)}</div></section>}<p className="source-note">資料來源：韓國觀光公社 · 繁體中文旅遊資訊{item.cpyrhtDivCd ? ` · 韓國公共著作授權 ${item.cpyrhtDivCd}` : ''}</p></main>;
+}
