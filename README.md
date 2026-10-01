@@ -13,6 +13,19 @@ npm run dev
 
 http://localhost:3000 에서 확인합니다. PowerShell 실행 정책이 npm.ps1을 차단하면 `npm.cmd`를 사용하세요.
 
+### 포트 지정
+
+`.env` 또는 `.env.local`에 `PORT=4000`을 설정하면 `npm run dev`와 `npm start` 모두 해당 포트로 실행됩니다. 환경 파일을 변경한 뒤에는 서버를 다시 시작하세요.
+
+실행할 때 직접 지정할 수도 있습니다.
+
+```sh
+npm run dev -- --port 4000
+npm start -- --port 4000
+```
+
+`--port` 대신 `-p`도 가능합니다. 우선순위는 실행 인자 → 셸의 `PORT` 환경변수 → Next.js 환경 파일 → 기본값 `3000`입니다. 환경 파일은 Next.js 규칙에 따라 `.env.development.local` 또는 `.env.production.local`, `.env.local`, 모드별 `.env`, `.env` 순으로 적용됩니다. 지정한 포트를 이미 사용 중이면 서버가 오류를 표시하므로 다른 포트를 선택하세요.
+
 제공된 키는 `.env.local`에 설정되어 있습니다. 새 환경에서는 `.env.example`을 `.env.local`로 복사하고 `TOUR_API_KEY`를 입력하세요. 인코딩된 키와 원본 키 모두 지원하며 키는 서버에서만 사용됩니다. `.env.local`은 버전 관리에서 제외됩니다.
 
 ```sh
