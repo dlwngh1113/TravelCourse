@@ -1,16 +1,114 @@
-export const categories = ['전체', '버튼', '라벨 & 배지', '탭', '카드', '입력 필드', '체크박스', '토글', '로더'] as const;
-export type Component = { id: string; title: string; category: string; html: string; css: string; author: string; createdAt: string; color: string; tags: string[] };
-const examples = [
- ['Soft pop button','버튼','<button class="pop">Let’s get started <span>↗</span></button>', '.pop{background:#8061d9;color:white;border:1px solid #6d4bc2;padding:17px 25px;border-radius:12px;box-shadow:0 5px 0 #6041a9;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}.pop:hover{transform:translateY(-3px);box-shadow:0 8px 0 #6041a9}.pop:active{transform:translateY(4px);box-shadow:none}.pop span{margin-left:20px}', '#f0eafa', 'purple,hover'],
- ['A little status update','라벨 & 배지','<div class="badges"><span class="live">● Available for work</span><span class="new">✦ New release</span><span class="beta">BETA <b>v.2.0</b></span></div>', '.badges{display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:13px;max-width:280px}.badges span{padding:9px 14px;border-radius:30px;font-size:12px;font-weight:600}.live{background:#def1e5;color:#438267}.new{background:#efe6fc;color:#8c60b7}.beta{background:#fff1d6;color:#9d7c38;letter-spacing:1px}.beta b{font-weight:400;margin-left:8px}', '#f6f6f2','badge,minimal'],
- ['Switch your perspective','탭','<div class="tabs"><input id="a" name="tab" type="radio" checked><label for="a">Overview</label><input id="b" name="tab" type="radio"><label for="b">Analytics</label><input id="c" name="tab" type="radio"><label for="c">Settings</label></div>', '.tabs{display:flex;padding:6px;background:#e5e5e2;border:1px solid #dcdcd9;border-radius:11px;gap:3px}.tabs input{position:absolute;opacity:0;width:1px}.tabs label{padding:12px 15px;font-size:12px;color:#83837f;cursor:pointer;border-radius:7px}.tabs input:checked+label{background:white;color:#333;box-shadow:0 2px 4px #0000000c}.tabs input:focus-visible+label{outline:2px solid #8061d9}', '#eeeeeb','tabs,interactive'],
- ['The everyday toggle','토글','<label class="switch"><input type="checkbox" checked aria-label="다크 모드"><span></span></label>', '.switch input{position:absolute;opacity:0}.switch span{display:block;width:76px;height:40px;border-radius:30px;background:#c8c7cc;cursor:pointer;transition:.3s;padding:5px}.switch span:after{content:"";display:block;width:30px;height:30px;background:white;border-radius:50%;box-shadow:0 2px 6px #0002;transition:.3s}.switch input:checked+span{background:#8a6cd3}.switch input:checked+span:after{transform:translateX(36px)}.switch input:focus-visible+span{outline:3px solid #b4a0e0;outline-offset:4px}', '#edeaf4','toggle,animated'],
- ['Good things take a second','로더','<div class="loading"><div class="dots"><i></i><i></i><i></i></div><span>A little magic in progress</span></div>', '.loading{text-align:center}.dots{display:flex;justify-content:center;gap:9px;margin-bottom:22px}.dots i{width:12px;height:12px;border-radius:50%;background:#b8946e;animation:bounce 1.2s infinite}.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}.loading span{font-size:11px;color:#a38f7c;letter-spacing:.3px}@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-13px);opacity:1}}@media(prefers-reduced-motion:reduce){.dots i{animation:none}}', '#f6eee4','loader,animation'],
- ['Less, but better','카드','<div class="mini"><div class="icon">✳</div><b>A little space for big ideas.</b><p>Make something that matters.</p><a href="#">Explore the possibilities ↗</a></div>', '.mini{background:#fff;padding:21px 24px;border:1px solid #e1e5db;border-radius:13px;width:245px;box-shadow:0 8px 18px #475a3507}.icon{color:#718363;font-size:29px;margin-bottom:13px}.mini b{font-size:12px;color:#3e4936}.mini p{font-size:10px;color:#90978a;margin:8px 0 18px}.mini a{font-size:10px;color:#6c7c60;text-decoration:none}', '#edf1e7','card,minimal'],
- ['An input with a little focus','입력 필드','<label class="field">Your next big idea<input placeholder="Start typing…"></label>', '.field{font-size:12px;color:#756888;display:grid;gap:10px}.field input{width:240px;border:1px solid #d6c9e6;border-radius:9px;padding:14px;background:white;outline:none}.field input:focus{border-color:#9270cb;box-shadow:0 0 0 4px #9270cb20}', '#f3edf8','input,focus'],
- ['Small wins checklist','체크박스','<div class="check"><label><input type="checkbox" checked> Make it simple</label><label><input type="checkbox"> Make it meaningful</label><label><input type="checkbox"> Ship something good</label></div>', '.check{display:grid;gap:15px}.check label{display:flex;align-items:center;gap:10px;font-size:13px;color:#62766a;cursor:pointer}.check input{accent-color:#6e937d;width:18px;height:18px}', '#eaf2ec','checkbox,minimal'],
- ['Outline, with an attitude','버튼','<button class="outline">A fresh start <span>↗</span></button>', '.outline{background:transparent;border:1px solid #4c6676;color:#4c6676;border-radius:30px;padding:15px 24px;font-size:14px;cursor:pointer;transition:.2s}.outline span{margin-left:30px}.outline:hover{background:#4c6676;color:white}', '#e9eff2','button,outline'],
+export const categories = [
+  "전체",
+  "버튼",
+  "라벨 & 배지",
+  "탭",
+  "카드",
+  "입력 필드",
+  "체크박스",
+  "토글",
+  "로더",
 ] as const;
-export const seeds: Component[] = examples.map((x,i)=>({id:`starter-${i+1}`,title:x[0],category:x[1],html:x[2],css:x[3],color:x[4],tags:x[5].split(','),author:'annoyingcss',createdAt:`2026-10-0${5-Math.floor(i/3)}T10:00:00Z`}));
-export function previewDocument(item: Pick<Component,'html'|'css'>) { return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; form-action 'none'; base-uri 'none'"><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;padding:20px} ${item.css.replace(/<\/style/gi,'<\\/style')}</style></head><body>${item.html}</body></html>`; }
-
+export type Component = {
+  id: string;
+  title: string;
+  category: string;
+  html: string;
+  css: string;
+  author: string;
+  ownerId?: number;
+  createdAt: string;
+  color: string;
+  tags: string[];
+  priceCents?: number;
+  currency?: "usd";
+  sellerStripeAccountId?: string;
+};
+const examples = [
+  [
+    "Soft pop button",
+    "버튼",
+    '<button class="pop">Let’s get started <span>↗</span></button>',
+    ".pop{background:#8061d9;color:white;border:1px solid #6d4bc2;padding:17px 25px;border-radius:12px;box-shadow:0 5px 0 #6041a9;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}.pop:hover{transform:translateY(-3px);box-shadow:0 8px 0 #6041a9}.pop:active{transform:translateY(4px);box-shadow:none}.pop span{margin-left:20px}",
+    "#f0eafa",
+    "purple,hover",
+  ],
+  [
+    "A little status update",
+    "라벨 & 배지",
+    '<div class="badges"><span class="live">● Available for work</span><span class="new">✦ New release</span><span class="beta">BETA <b>v.2.0</b></span></div>',
+    ".badges{display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:13px;max-width:280px}.badges span{padding:9px 14px;border-radius:30px;font-size:12px;font-weight:600}.live{background:#def1e5;color:#438267}.new{background:#efe6fc;color:#8c60b7}.beta{background:#fff1d6;color:#9d7c38;letter-spacing:1px}.beta b{font-weight:400;margin-left:8px}",
+    "#f6f6f2",
+    "badge,minimal",
+  ],
+  [
+    "Switch your perspective",
+    "탭",
+    '<div class="tabs"><input id="a" name="tab" type="radio" checked><label for="a">Overview</label><input id="b" name="tab" type="radio"><label for="b">Analytics</label><input id="c" name="tab" type="radio"><label for="c">Settings</label></div>',
+    ".tabs{display:flex;padding:6px;background:#e5e5e2;border:1px solid #dcdcd9;border-radius:11px;gap:3px}.tabs input{position:absolute;opacity:0;width:1px}.tabs label{padding:12px 15px;font-size:12px;color:#83837f;cursor:pointer;border-radius:7px}.tabs input:checked+label{background:white;color:#333;box-shadow:0 2px 4px #0000000c}.tabs input:focus-visible+label{outline:2px solid #8061d9}",
+    "#eeeeeb",
+    "tabs,interactive",
+  ],
+  [
+    "The everyday toggle",
+    "토글",
+    '<label class="switch"><input type="checkbox" checked aria-label="다크 모드"><span></span></label>',
+    '.switch input{position:absolute;opacity:0}.switch span{display:block;width:76px;height:40px;border-radius:30px;background:#c8c7cc;cursor:pointer;transition:.3s;padding:5px}.switch span:after{content:"";display:block;width:30px;height:30px;background:white;border-radius:50%;box-shadow:0 2px 6px #0002;transition:.3s}.switch input:checked+span{background:#8a6cd3}.switch input:checked+span:after{transform:translateX(36px)}.switch input:focus-visible+span{outline:3px solid #b4a0e0;outline-offset:4px}',
+    "#edeaf4",
+    "toggle,animated",
+  ],
+  [
+    "Good things take a second",
+    "로더",
+    '<div class="loading"><div class="dots"><i></i><i></i><i></i></div><span>A little magic in progress</span></div>',
+    ".loading{text-align:center}.dots{display:flex;justify-content:center;gap:9px;margin-bottom:22px}.dots i{width:12px;height:12px;border-radius:50%;background:#b8946e;animation:bounce 1.2s infinite}.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}.loading span{font-size:11px;color:#a38f7c;letter-spacing:.3px}@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-13px);opacity:1}}@media(prefers-reduced-motion:reduce){.dots i{animation:none}}",
+    "#f6eee4",
+    "loader,animation",
+  ],
+  [
+    "Less, but better",
+    "카드",
+    '<div class="mini"><div class="icon">✳</div><b>A little space for big ideas.</b><p>Make something that matters.</p><a href="#">Explore the possibilities ↗</a></div>',
+    ".mini{background:#fff;padding:21px 24px;border:1px solid #e1e5db;border-radius:13px;width:245px;box-shadow:0 8px 18px #475a3507}.icon{color:#718363;font-size:29px;margin-bottom:13px}.mini b{font-size:12px;color:#3e4936}.mini p{font-size:10px;color:#90978a;margin:8px 0 18px}.mini a{font-size:10px;color:#6c7c60;text-decoration:none}",
+    "#edf1e7",
+    "card,minimal",
+  ],
+  [
+    "An input with a little focus",
+    "입력 필드",
+    '<label class="field">Your next big idea<input placeholder="Start typing…"></label>',
+    ".field{font-size:12px;color:#756888;display:grid;gap:10px}.field input{width:240px;border:1px solid #d6c9e6;border-radius:9px;padding:14px;background:white;outline:none}.field input:focus{border-color:#9270cb;box-shadow:0 0 0 4px #9270cb20}",
+    "#f3edf8",
+    "input,focus",
+  ],
+  [
+    "Small wins checklist",
+    "체크박스",
+    '<div class="check"><label><input type="checkbox" checked> Make it simple</label><label><input type="checkbox"> Make it meaningful</label><label><input type="checkbox"> Ship something good</label></div>',
+    ".check{display:grid;gap:15px}.check label{display:flex;align-items:center;gap:10px;font-size:13px;color:#62766a;cursor:pointer}.check input{accent-color:#6e937d;width:18px;height:18px}",
+    "#eaf2ec",
+    "checkbox,minimal",
+  ],
+  [
+    "Outline, with an attitude",
+    "버튼",
+    '<button class="outline">A fresh start <span>↗</span></button>',
+    ".outline{background:transparent;border:1px solid #4c6676;color:#4c6676;border-radius:30px;padding:15px 24px;font-size:14px;cursor:pointer;transition:.2s}.outline span{margin-left:30px}.outline:hover{background:#4c6676;color:white}",
+    "#e9eff2",
+    "button,outline",
+  ],
+] as const;
+export const seeds: Component[] = examples.map((x, i) => ({
+  id: `starter-${i + 1}`,
+  title: x[0],
+  category: x[1],
+  html: x[2],
+  css: x[3],
+  color: x[4],
+  tags: x[5].split(","),
+  author: "annoyingcss",
+  createdAt: `2026-10-0${5 - Math.floor(i / 3)}T10:00:00Z`,
+}));
+export function previewDocument(item: Pick<Component, "html" | "css">) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; form-action 'none'; base-uri 'none'"><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;padding:20px} ${item.css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${item.html}</body></html>`;
+}

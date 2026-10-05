@@ -42,7 +42,7 @@ OAuth는 state 검증과 PKCE를 사용하며 토큰을 브라우저에 노출�
 - 다운로드한 두 파일을 같은 폴더에 두면 HTML에서 CSS를 참조
 - 브라우저 로컬 저장 컬렉션
 - GitHub 로그인·로그아웃, 내 컴포넌트, 파일 선택 및 코드 입력 업로드
-- 업로드한 콘텐츠는 MIT 라이선스 공개 동의를 받음
+- 무료 컴포넌트는 작성자가 지정한 라이선스, 유료 컴포넌트는 annoyingcss 구매 라이선스를 사용
 - 한국어 반응형 화면, 키보드 모달, 빈 상태·오류 안내
 
 로그인 키가 없어도 탐색과 다운로드는 동작합니다. 인증 우회용 데모 로그인은 없습니다.
@@ -60,5 +60,13 @@ HTML·CSS 전용 미리보기로 스크립트, 외부 리소스, 폼 전송은 �
 서버 실행 후 `node scripts/browser-check.mjs`로 Edge 기반 탐색·저장·다운로드·모바일 검증을 실행합니다.
 `TEST_ORIGIN`으로 검사할 서버 주소를 지정할 수 있습니다.
 실제 OAuth 완료 검증에는 GitHub 앱 키와 사용자 승인이 필요합니다.
+
+## 결제와 판매자 정산
+
+Stripe Connect Express와 Stripe Checkout을 사용합니다. `.env.local`에 `STRIPE_SECRET_KEY`와 `STRIPE_WEBHOOK_SECRET`을 설정한 뒤 Stripe Dashboard에서 `https://49.247.131.223/api/stripe/webhook` 웹훅을 등록하고 `checkout.session.completed`, `checkout.session.async_payment_succeeded` 이벤트를 선택하세요. 판매자는 업로드 화면에서 Stripe 정산 계정을 연결한 뒤 가격을 0~1,000달러로 설정할 수 있습니다.
+
+결제 금액의 5%는 annoyingcss 플랫폼 수수료로 표시되며, Stripe Connect destination charge를 통해 판매자에게 95%가 정산됩니다. 실제 정산은 Stripe의 계정 인증, 국가별 지원 여부, 결제 처리와 지급 일정에 따릅니다. 구매자는 결제 후 해당 HTML·CSS를 자신의 프로젝트에서 사용하고 수정할 수 있으며 원본 컴포넌트를 재판매하거나 컴포넌트 저장소로 재배포할 수 없습니다. 판매자는 업로드 코드에 필요한 저작권과 배포 권리를 보유해야 합니다.
+
+결제 라이선스 문구는 서비스 화면에 표시되지만, 운영 전 법률 검토와 환불·세금·분쟁 정책을 별도로 확정해야 합니다. Stripe의 [Connect 온보딩](https://docs.stripe.com/connect/enable-payment-acceptance-guide)과 [Checkout 결제 및 웹훅](https://docs.stripe.com/connect/separate-charges-and-transfers) 문서를 참고하세요.
 
 `node scripts/upload-check.mjs`는 별도 포트 3011의 테스트 서버에서 테스트 전용 서명 세션으로 업로드·디스크 저장·새로고침·CSS 다운로드·입력 검증·OAuth 리디렉션·로그아웃을 검사합니다. 실제 GitHub 로그인 성공을 모의 검증하지 않습니다.
