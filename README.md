@@ -1,60 +1,64 @@
-# 길 GIL — 한국 관광정보 사이트
+# annoyingcss
 
-Next.js App Router · TypeScript · 요청별 서버 사이드 렌더링(SSR).
+HTML·CSS 컴포넌트를 발견하고 공유하는 Next.js 웹사이트입니다.
 
 ## 실행
 
-Node.js 20.9 이상에서 실행합니다.
+Node.js 20.9 이상에서 `npm install`, `npm run dev`를 실행합니다.
+기본 주소는 http://localhost:3000 입니다. Windows에서는 `npm.cmd`를 사용할 수 있습니다.
+`npm run dev -- --port 4000`으로 포트를 변경할 수 있습니다.
 
-```sh
-npm install
-npm run dev
+## GitHub 로그인 연결
+
+프로젝트 루트의 `.env.local`에 OAuth 키를 입력하세요. `.env`도 지원하지만 같은 항목은 `.env.local` 설정이 우선합니다. 키는 서버에서만 사용하며 Git에는 포함되지 않습니다.
+
+```dotenv
+APP_URL=https://49.247.131.223
+GITHUB_CLIENT_ID=GitHub에서_발급받은_Client_ID
+GITHUB_CLIENT_SECRET=GitHub에서_발급받은_Client_Secret
+SESSION_SECRET=충분히_긴_무작위_문자열
 ```
 
-http://localhost:3000 에서 확인합니다. PowerShell 실행 정책이 npm.ps1을 차단하면 `npm.cmd`를 사용하세요.
+`.env.local`의 `SESSION_SECRET`은 준비된 값을 그대로 사용하면 됩니다. 새로운 서버에서 설정할 때는 아래 생성 명령을 사용하세요.
 
-### 포트 지정
+1. GitHub Settings → Developer settings → OAuth Apps에서 앱을 등록합니다.
+2. Homepage URL은 `APP_URL`과 동일하게 설정합니다.
+3. Authorization callback URL: `https://49.247.131.223/auth`. 코드에서는 `APP_URL`에 `/auth`를 붙여 로그인 요청과 토큰 교환에 동일하게 사용합니다.
+4. `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`을 입력합니다.
+5. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`로 생성한 값을 `SESSION_SECRET`에 입력합니다.
+6. 서버를 재시작합니다. 운영 환경에서는 HTTPS 주소를 사용합니다.
 
-`.env` 또는 `.env.local`에 `PORT=4000`을 설정하면 `npm run dev`와 `npm start` 모두 해당 포트로 실행됩니다. 환경 파일을 변경한 뒤에는 서버를 다시 시작하세요.
+HTTPS를 처리하는 프록시가 `/auth`를 포함한 요청을 Next.js 서버로 전달해야 합니다. 로컬에서 실제 로그인을 테스트할 경우 `APP_URL=http://localhost:3000`과 GitHub 콜백 `http://localhost:3000/auth`를 함께 설정하세요.
 
-실행할 때 직접 지정할 수도 있습니다.
+OAuth는 state 검증과 PKCE를 사용하며 토큰을 브라우저에 노출하거나 저장하지 않습니다.
+로그인에는 공개 프로필만 사용하며 저장소 접근 권한을 요청하지 않습니다.
+[GitHub OAuth 공식 문서](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
 
-```sh
-npm run dev -- --port 4000
-npm start -- --port 4000
-```
+## 기능
 
-`--port` 대신 `-p`도 가능합니다. 우선순위는 실행 인자 → 셸의 `PORT` 환경변수 → Next.js 환경 파일 → 기본값 `3000`입니다. 환경 파일은 Next.js 규칙에 따라 `.env.development.local` 또는 `.env.production.local`, `.env.local`, 모드별 `.env`, `.env` 순으로 적용됩니다. 지정한 포트를 이미 사용 중이면 서버가 오류를 표시하므로 다른 포트를 선택하세요.
+- 8개 카테고리, 제목·작성자·태그 검색, 추천·최신·이름순 정렬
+- 9개의 자체 제작 샘플 (샘플 배지로 구분)
+- 격리된 iframe HTML/CSS 미리보기, 코드 복사, HTML/CSS 개별 다운로드
+- 다운로드한 두 파일을 같은 폴더에 두면 HTML에서 CSS를 참조
+- 브라우저 로컬 저장 컬렉션
+- GitHub 로그인·로그아웃, 내 컴포넌트, 파일 선택 및 코드 입력 업로드
+- 업로드한 콘텐츠는 MIT 라이선스 공개 동의를 받음
+- 한국어 반응형 화면, 키보드 모달, 빈 상태·오류 안내
 
-제공된 키는 `.env.local`에 설정되어 있습니다. 새 환경에서는 `.env.example`을 `.env.local`로 복사하고 `TOUR_API_KEY`를 입력하세요. 인코딩된 키와 원본 키 모두 지원하며 키는 서버에서만 사용됩니다. `.env.local`은 버전 관리에서 제외됩니다.
+로그인 키가 없어도 탐색과 다운로드는 동작합니다. 인증 우회용 데모 로그인은 없습니다.
+HTML·CSS 전용 미리보기로 스크립트, 외부 리소스, 폼 전송은 차단됩니다.
 
-```sh
-npm run typecheck
-npm run build
-npm start
-```
+## 저장소와 배포
 
-## 기능 및 명세
-
-- 지역, 관광 유형, 번체 키워드 검색 및 정렬, 페이지 이동
-- 목록은 대표이미지가 있는 항목을 조회합니다. API 정렬 코드 O(이름순), Q(최근 업데이트순, 기본값), R(최근 등록순)를 사용하며 이미지 없는 항목은 결과와 전체 건수에서 제외됩니다.
-- 관광지 상세 소개, 이용 안내, 이미지, 외부 지도 링크
-- 모바일 대응, 키보드 탐색, 로딩·빈 결과·API 장애 화면
-- `manual.docx` Ver4.4(2026-02-19) 기준 `ChtService2` 사용
-- `areaBasedList2`, `searchKeyword2`, `ldongCode2`, `detailCommon2`, `detailIntro2`, `detailInfo2`, `detailImage2` 연동
-- 법정동 코드 `lDongRegnCd` 사용. 폐기된 `areaCode` 파라미터는 사용하지 않음
-- 키워드 API는 관광 타입 파라미터를 지원하지 않으므로 키워드 검색 시 유형 필터 해제
-- 목록과 상세는 `force-dynamic`, 데이터 요청은 `cache: 'no-store'`로 매 요청 서버에서 처리
-- 키가 포함된 API URL이나 원본 오류 메시지를 브라우저에 전달하지 않음
-- 사이트 UI, 접근성 안내, 메타데이터는 중문 번체이며 페이지 언어는 `zh-Hant`입니다. API 데이터는 번체 원문을 사용하며 원문에 포함된 공식 고유명사는 유지합니다.
-- 개발계정 호출 한도는 매뉴얼 기준 일 1,000회. 목록 화면 2회, 상세 최대 4회 호출
-
-히어로 사진은 Unsplash 사진을 `public/korea-hero.jpg`에 저장해 사용하며, 관광지 사진은 API 제공 원본을 사용합니다. 외부 글꼴 또는 사진 연결이 불가능하면 대체 글꼴과 이미지 안내 화면이 표시됩니다. 이미지 사용 시 각 권리자의 이용 조건과 API의 공공누리 표시를 확인하세요.
-
-SSR 문서: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic
+컴포넌트는 `DATA_DIR`(기본 `data/components`)에 UUID별 JSON 파일로 원자적으로 저장됩니다.
+단일 Node.js 서버 및 영구 디스크를 전제로 합니다. 서버리스/여러 인스턴스로 운영할 경우 공유 데이터베이스를 연결해야 합니다.
+`data/`와 환경 파일은 Git에서 제외됩니다. 기존 관광 API 환경 값은 사용하지 않습니다.
 
 ## 검증
 
-서버 실행 후 `node scripts/smoke.mjs`로 실제 API 검색·상세 SSR과 키 비노출을 확인합니다. `node scripts/browser-check.mjs`는 설치된 Microsoft Edge를 이용해 데스크톱·모바일 화면, 지역 검색과 상세 이동을 확인합니다. 스크린샷은 버전 관리에서 제외됩니다. 테스트는 실제 API 호출 한도를 사용합니다.
+`npm run build`, `npm run typecheck`를 실행하세요.
+서버 실행 후 `node scripts/browser-check.mjs`로 Edge 기반 탐색·저장·다운로드·모바일 검증을 실행합니다.
+`TEST_ORIGIN`으로 검사할 서버 주소를 지정할 수 있습니다.
+실제 OAuth 완료 검증에는 GitHub 앱 키와 사용자 승인이 필요합니다.
 
-App Router의 스트리밍이 시작된 이후 존재하지 않는 상세 경로는 HTTP 200과 함께 오류 화면 및 `noindex` 메타데이터를 반환할 수 있습니다.
+`node scripts/upload-check.mjs`는 별도 포트 3011의 테스트 서버에서 테스트 전용 서명 세션으로 업로드·디스크 저장·새로고침·CSS 다운로드·입력 검증·OAuth 리디렉션·로그아웃을 검사합니다. 실제 GitHub 로그인 성공을 모의 검증하지 않습니다.

@@ -1,2 +1,2 @@
 'use client';
-export default function ErrorPage({reset}: {reset: () => void}) {return <main id="main" className="empty"><h1>暫時發生問題。</h1><p>請稍後再試。</p><button onClick={reset}>重試</button></main>;}
+export default function ErrorPage({reset}: {reset: () => void}) {return <main className="empty"><h1>잠시 문제가 생겼어요.</h1><p>다시 시도해 주세요.</p><button className="primary" onClick={reset}>다시 시도</button></main>;}

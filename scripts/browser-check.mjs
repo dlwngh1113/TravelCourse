@@ -1,26 +1,51 @@
-import {chromium} from '@playwright/test';
+import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
-
-const browser = await chromium.launch({channel: 'msedge', headless: true});
-const origin = process.env.TEST_ORIGIN || 'http://127.0.0.1:3000';
-try {
-  const page = await browser.newPage({viewport: {width: 1440, height: 1080}});
-  await page.goto(origin, {waitUntil: 'networkidle'});
-  assert.equal(await page.locator('.card').count(), 12);
-  assert.equal(await page.locator('html').getAttribute('lang'), 'zh-Hant');
-  assert.ok(!/[가-힣]/u.test(await page.locator('.header').innerText()));
-  assert.ok(!/[가-힣]/u.test(await page.locator('.search').innerText()));
-  assert.ok(!/[가-힣]/u.test(await page.locator('footer').innerText()));
-  await page.screenshot({path: 'desktop-check.png', fullPage: true});
-  await page.getByRole('combobox', {name: '地區', exact: true}).selectOption('11');
-  await page.getByRole('button', {name: '尋找景點'}).click();
-  await page.waitForURL('**region=11**');
-  await page.locator('.card').first().click();
-  await page.getByRole('heading', {name: '景點介紹'}).waitFor();
-  await page.screenshot({path: 'detail-check.png', fullPage: true});
-  await page.setViewportSize({width: 390, height: 844});
-  await page.goto(origin, {waitUntil: 'networkidle'});
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'No horizontal overflow');
-  await page.screenshot({path: 'mobile-check.png', fullPage: true});
-  console.log('PASS desktop, region form, detail navigation, mobile layout');
-} finally {await browser.close();}
+const browser = await chromium.launch({channel:'msedge',headless:true});
+const origin=process.env.TEST_ORIGIN||'http://localhost:3000';
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:1080}});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(origin,{waitUntil:'networkidle'});
+ await page.locator('.component-card').first().waitFor();
+ assert.equal(await page.locator('.component-card').count(),9);
+ for(const card of await page.locator('.component-card').all()){await card.scrollIntoViewIfNeeded();await page.evaluate(()=>new Promise(requestAnimationFrame));}
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await page.screenshot({path:'desktop-check.png',fullPage:true});
+ await page.locator('.category-list button').filter({hasText:'버튼'}).click();
+ assert.equal(await page.locator('.component-card').count(),2);
+ await page.getByRole('textbox',{name:'컴포넌트 검색'}).fill('nothing-here');
+ assert.equal(await page.locator('.component-card').count(),0);
+ await page.getByRole('button',{name:'전체 둘러보기',exact:true}).click();
+ await page.getByRole('button',{name:'Soft pop button 저장',exact:true}).click();
+ await page.getByRole('button',{name:'저장한 컴포넌트',exact:true}).click();
+ assert.equal(await page.locator('.component-card').count(),1);
+ await page.reload();
+ await page.getByRole('button',{name:'저장한 컴포넌트',exact:true}).click();
+ assert.equal(await page.locator('.component-card').count(),1);
+ await page.getByRole('button',{name:'Soft pop button',exact:true}).click();
+ assert.equal(await page.locator('dialog iframe').getAttribute('sandbox'),'');
+ await page.getByRole('button',{name:'HTML',exact:true}).first().click();
+ await page.locator('.code-block').waitFor();
+ const event=page.waitForEvent('download');
+ await page.locator('.download-actions').getByRole('button',{name:'HTML',exact:true}).click();
+ const dl=await event;assert.equal(dl.suggestedFilename(),'starter-1.html');
+ const stream=await dl.createReadStream();let content='';for await(const chunk of stream)content+=chunk;
+ assert.ok(content.includes('starter-1.css'));
+ await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'컴포넌트 올리기',exact:true}).click();
+ await page.getByRole('dialog').waitFor();
+ assert.ok((await page.getByRole('dialog').innerText()).includes('GitHub'));
+ await page.keyboard.press('Escape');
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(origin,{waitUntil:'networkidle'});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No mobile overflow');
+ for(const card of await page.locator('.component-card').all()){await card.scrollIntoViewIfNeeded();await page.evaluate(()=>new Promise(requestAnimationFrame));}
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await page.screenshot({path:'mobile-check.png',fullPage:true});
+ const rejected=await page.request.post(origin+'/api/components',{headers:{origin},data:{title:'forbidden'}});
+ assert.equal(rejected.status(),401);
+ const csrf=await page.request.post(origin+'/api/components',{headers:{origin:'https://example.org'},data:{}});
+ assert.equal(csrf.status(),403);
+ assert.deepEqual(errors,[]);
+ console.log('PASS: gallery, categories, search, saved persistence, sandbox, HTML download, login prompt, mobile layout, unauthenticated upload and origin rejection.');
+}finally{await browser.close();}

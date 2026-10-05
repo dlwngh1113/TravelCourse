@@ -5,3 +5,4 @@ node_modules/
 *.tsbuildinfo
 manual-extracted.txt
 *-check.png
+data/

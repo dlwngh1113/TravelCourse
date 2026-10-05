@@ -1,26 +1,6 @@
-import TourImage from '@/app/tour-image';
-import Link from 'next/link';
-import {categories, categoryName, plain, safeImage, tour} from '@/lib/tour';
-
+import Gallery from './gallery';
+import { listComponents } from '@/lib/store';
+import { currentUser, configured } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
-type Query = Record<string, string | string[] | undefined>;
-export default async function Home({searchParams}: {searchParams: Promise<Query>}) {
-  const query = await searchParams;
-  const value = (key: string) => typeof query[key] === 'string' ? query[key] as string : '';
-  const keyword = value('q').trim().slice(0, 100);
-  const region = /^\d{2}$/.test(value('region')) ? value('region') : '';
-  const type = !keyword && categories.some(([code]) => code === value('type')) ? value('type') : '';
-  const sort = ['A', 'C', 'D'].includes(value('sort')) ? value('sort') : 'C';
-  const page = Math.min(10000, Math.max(1, Number.parseInt(value('page'), 10) || 1));
-  const imageFirstSort: Record<string, string> = {A: 'O', C: 'Q', D: 'R'};
-  const params: Record<string, string> = {arrange: imageFirstSort[sort], pageNo: String(page)};
-  if (region) params.lDongRegnCd = region;
-  if (keyword) params.keyword = keyword;
-  if (type) params.contentTypeId = type;
-  const [listing, regions] = await Promise.allSettled([tour(keyword ? 'searchKeyword2' : 'areaBasedList2', params), tour('ldongCode2', {numOfRows: '50', lDongListYn: 'N'})]);
-  const items = listing.status === 'fulfilled' ? listing.value.items : [];
-  const total = listing.status === 'fulfilled' ? listing.value.total : 0;
-  const pages = Math.ceil(total / 12);
-  const href = (changes: Record<string, string>) => {const next = new URLSearchParams({q: keyword, region, type, sort, ...changes}); for (const [key, val] of [...next]) if (!val) next.delete(key); return `/?${next}#explore`;};
-  return <main id="main"><section className="hero"><div className="hero-shade"/><div className="hero-content"><p className="eyebrow">每段旅程，都從一點好奇心開始</p><h1>在熟悉的地方，<br/>遇見不一樣的韓國<span>.</span></h1><p className="hero-description">從城市巷弄，到靜謐的大自然。<br/>下一段旅程，就從這裡開始。</p><a href="#explore" className="hero-link">探索專屬旅程 <span>↗</span></a></div><div className="hero-bottom"><span>與韓國風景相遇的時刻</span><span>探索韓國 — 01 / 01</span></div></section><section id="explore" className="explore"><div className="section-heading"><div><p className="eyebrow green">尋找下一個目的地</p><h2>下一站，想去哪裡？</h2></div><p>發現心儀的目的地，<br/>描繪屬於自己的旅程。</p></div><form className="search" action="/#explore"><label className="keyword"><span>搜尋景點</span><input name="q" defaultValue={keyword} placeholder="搜尋想去的地方" maxLength={100}/></label><label><span>地區</span><select name="region" defaultValue={region}><option value="">韓國全境</option>{regions.status === 'fulfilled' ? regions.value.items.map(item => <option key={item.code} value={item.code}>{item.name}</option>) : region && <option value={region}>已選地區 ({region})</option>}</select></label><label><span>排序</span><select name="sort" defaultValue={sort}><option value="C">最近更新</option><option value="A">依名稱排序</option><option value="D">最新刊登</option></select></label>{type && <input type="hidden" name="type" value={type}/>}<button type="submit">尋找景點 <span>↗</span></button></form><p className="source-note">資訊由韓國觀光公社提供。使用繁體中文關鍵字（例如：首爾、市場）搜尋更準確。關鍵字搜尋會清除類別篩選。</p><div className="categories" aria-label="旅遊類別"><Link className={!type ? 'active' : ''} href={href({type: '', q: '', page: '1'})}><span>✳</span>全部景點</Link>{categories.map(([code, name, icon]) => <Link className={type === code ? 'active' : ''} key={code} href={href({type: code, q: '', page: '1'})}><span>{icon}</span>{name}</Link>)}</div><div className="results-heading"><h3>{keyword ? `“${keyword}” 搜尋結果` : type ? `${categoryName(type)} 探索` : '發現下一個心動景點'}<span>{total.toLocaleString('zh-TW')} 處</span></h3><span>韓國觀光公社提供</span></div>{regions.status === 'rejected' && <p className="source-note">無法載入地區清單，仍可搜尋所有地區。</p>}{listing.status === 'rejected' ? <div className="empty" role="alert"><span>↻</span><h3>旅遊資訊暫時無法使用</h3><p>{listing.reason instanceof Error ? listing.reason.message : '請稍後再試。'}</p><a href={href({page: String(page)})}>重新載入 →</a></div> : !items.length ? <div className="empty"><span>⌕</span><h3>找不到符合條件的景點。</h3><p>請嘗試其他關鍵字或地區，探索更多景點。</p><Link href="/#explore">查看所有景點 →</Link></div> : <div className="grid">{items.map((item, index) => <Link href={`/places/${item.contentid}`} key={item.contentid} className="card"><div className="card-image">{safeImage(item.firstimage) ? <TourImage src={safeImage(item.firstimage)} alt={plain(item.title)} loading={index < 3 ? 'eager' : 'lazy'}/> : <div className="image-placeholder"><span>旅</span><small>期待下一道風景</small></div>}<span className="badge">{categoryName(item.contenttypeid)}</span><span className="card-arrow">↗</span></div><div className="card-body"><p className="address" lang="zh-Hant">{item.addr1 || '韓國'}</p><h4 lang="zh-Hant">{plain(item.title)}</h4><span className="card-more">查看景點詳情 <span>→</span></span></div></Link>)}</div>}{pages > 1 && <nav className="pagination" aria-label="搜尋結果分頁">{page > 1 && <Link href={href({page: String(page - 1)})}>← 上一頁</Link>}<span>{page} / {pages.toLocaleString('zh-TW')}</span>{page < pages && <Link href={href({page: String(page + 1)})}>下一頁 →</Link>}</nav>}<aside className="travel-note"><span className="note-mark">✳</span><div><p className="eyebrow">旅途小提醒</p><h3>不在計畫中的片刻，<br/>或許最令人難忘。</h3></div><p>不妨放慢腳步，<br/>新的風景，比想像中更近。</p></aside></section></main>;
-}
+export default async function Home() { const [items, user] = await Promise.all([listComponents(), currentUser()]); return <Gallery initialItems={items} user={user} authReady={configured()}/>; }
+
