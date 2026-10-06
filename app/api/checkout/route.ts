@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { getComponent, getSeller, hasPurchase } from "@/lib/store";
+import { getPrompt, getSeller, hasPurchase } from "@/lib/store";
 import { paymentsConfigured, stripe } from "@/lib/stripe";
 export async function POST(request: Request) {
   if (
@@ -21,27 +21,27 @@ export async function POST(request: Request) {
     );
   try {
     const body = await request.json();
-    const item = await getComponent(
-      typeof body?.componentId === "string" ? body.componentId : "",
+    const item = await getPrompt(
+      typeof body?.promptId === "string" ? body.promptId : "",
     );
-    if (!item)
+    if (!item || item.deletedAt)
       return NextResponse.json(
-        { error: "컴포넌트를 찾을 수 없습니다." },
+        { error: "프롬프트를 찾을 수 없습니다." },
         { status: 404 },
       );
     if (!item.priceCents || item.priceCents <= 0)
       return NextResponse.json(
-        { error: "무료 컴포넌트입니다." },
+        { error: "무료 프롬프트입니다." },
         { status: 400 },
       );
     if (item.ownerId === user.id)
       return NextResponse.json(
-        { error: "내 컴포넌트는 구매할 수 없습니다." },
+        { error: "내 프롬프트는 구매할 수 없습니다." },
         { status: 400 },
       );
     if (await hasPurchase(user.id, item.id))
       return NextResponse.json(
-        { error: "이미 구매한 컴포넌트입니다." },
+        { error: "이미 구매한 프롬프트입니다." },
         { status: 409 },
       );
     const seller = await getSeller(item.ownerId || 0);
@@ -58,10 +58,10 @@ export async function POST(request: Request) {
       "line_items[0][price_data][unit_amount]": String(item.priceCents),
       "line_items[0][price_data][product_data][name]": item.title,
       "line_items[0][price_data][product_data][description]":
-        "annoyingcss 컴포넌트 라이선스",
+        "annoyingcss 프롬프트 라이선스",
       "payment_intent_data[application_fee_amount]": String(fee),
       "payment_intent_data[transfer_data][destination]": seller.stripeAccountId,
-      "metadata[componentId]": item.id,
+      "metadata[promptId]": item.id,
       "metadata[buyerId]": String(user.id),
       "metadata[sellerId]": String(item.ownerId || ""),
       "metadata[amountCents]": String(item.priceCents),

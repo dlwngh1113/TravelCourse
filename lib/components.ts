@@ -21,6 +21,7 @@ export type Component = {
   color: string;
   tags: string[];
   priceCents?: number;
+  previewLocked?: boolean;
   currency?: "usd";
   sellerStripeAccountId?: string;
 };

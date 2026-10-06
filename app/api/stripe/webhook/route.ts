@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { savePurchase } from "@/lib/store";
+import { getPrompt } from "@/lib/store";
 import { verifyStripeSignature } from "@/lib/stripe";
 export async function POST(request: Request) {
   const payload = await request.text();
@@ -18,16 +19,18 @@ export async function POST(request: Request) {
     ) {
       const session = event.data?.object;
       const metadata = session?.metadata || {};
-      if (
-        session?.payment_status === "paid" ||
-        event.type === "checkout.session.async_payment_succeeded"
-      ) {
+      const promptId = typeof metadata.promptId === "string" ? metadata.promptId : "";
+      const buyerId = Number(metadata.buyerId);
+      const amountCents = Number(metadata.amountCents);
+      const prompt = promptId ? await getPrompt(promptId) : null;
+      const paid = event.type === "checkout.session.async_payment_succeeded" || session?.payment_status === "paid";
+      if (prompt && Number.isInteger(buyerId) && buyerId > 0 && Number.isInteger(amountCents) && amountCents === prompt.priceCents && paid) {
         await savePurchase({
           id: session.id,
-          componentId: metadata.componentId,
-          buyerId: Number(metadata.buyerId),
+          promptId,
+          buyerId,
           sellerId: Number(metadata.sellerId),
-          amountCents: Number(metadata.amountCents),
+          amountCents,
           currency: "usd",
           stripeSessionId: session.id,
           createdAt: new Date().toISOString(),

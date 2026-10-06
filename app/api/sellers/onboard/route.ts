@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         type: "express",
         "capabilities[card_payments][requested]": "true",
         "capabilities[transfers][requested]": "true",
-        "business_profile[product_description]": "HTML/CSS UI 컴포넌트",
+        "business_profile[product_description]": "AI 프롬프트와 사용 가이드",
       });
       seller = { userId: user.id, stripeAccountId: account.id };
       await saveSeller(user.id, account.id);

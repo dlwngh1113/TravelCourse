@@ -6,3 +6,5 @@ node_modules/
 manual-extracted.txt
 *-check.png
 data/
+.next-local/
+!.env.local-test.example

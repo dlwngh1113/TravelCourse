@@ -1,7 +1,8 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { localTestingEnabled } from './local-testing';
 
-export const paymentsConfigured = () => Boolean(process.env.STRIPE_SECRET_KEY);
+export const paymentsConfigured = () => Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET);
 export async function stripe(
   path: string,
   params: Record<string, string> = {},
@@ -9,6 +10,8 @@ export async function stripe(
 ) {
   if (!process.env.STRIPE_SECRET_KEY)
     throw new Error("Stripe 결제 설정이 없습니다.");
+  if (localTestingEnabled() && !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_'))
+    throw new Error('로컬 환경에서는 Stripe 테스트 키만 사용할 수 있습니다.');
   const response = await fetch(`https://api.stripe.com/v1/${path}`, {
     method,
     headers: {
@@ -36,23 +39,24 @@ export function verifyStripeSignature(
     .split(",")
     .find((v) => v.startsWith("t="))
     ?.slice(2);
-  const value = signature
+  const values = signature
     .split(",")
-    .find((v) => v.startsWith("v1="))
-    ?.slice(3);
+    .filter((v) => v.startsWith("v1="))
+    .map((v) => v.slice(3));
   if (
     !timestamp ||
-    !value ||
+    !values.length ||
+    !Number.isFinite(Number(timestamp)) ||
     Math.abs(Date.now() / 1000 - Number(timestamp)) > 300
   )
     return false;
   const expected = createHmac("sha256", process.env.STRIPE_WEBHOOK_SECRET)
     .update(`${timestamp}.${payload}`)
     .digest("hex");
-  const actual = Buffer.from(value, "hex");
   const expectedBytes = Buffer.from(expected, "hex");
-  return (
-    actual.length === expectedBytes.length &&
-    timingSafeEqual(actual, expectedBytes)
-  );
+  return values.some(value => {
+    if (!/^[a-f0-9]{64}$/i.test(value)) return false;
+    const actual = Buffer.from(value, 'hex');
+    return actual.length === expectedBytes.length && timingSafeEqual(actual, expectedBytes);
+  });
 }
