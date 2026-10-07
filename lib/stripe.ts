@@ -2,7 +2,8 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { localTestingEnabled } from './local-testing';
 
-export const paymentsConfigured = () => Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET);
+export const stripeConfigured = () => Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+export const paymentsConfigured = () => stripeConfigured() && Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim());
 export async function stripe(
   path: string,
   params: Record<string, string> = {},
