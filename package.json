@@ -8,14 +8,22 @@
     "dev": "node scripts/next-server.mjs dev",
     "build": "next build",
     "start": "node scripts/next-server.mjs start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node --env-file=.env.local scripts/database-setup.mjs",
+    "test": "node scripts/wedding-check.mjs && node scripts/repository-check.mjs",
+    "db:check": "node --env-file=.env.local scripts/database-check.mjs",
+    "subscriptions:renew": "node --env-file=.env.local scripts/renew-subscriptions.mjs",
+    "test:http": "node scripts/http-check.mjs"
   },
   "dependencies": {
+    "@tosspayments/tosspayments-sdk": "^2.9.0",
+    "jose": "^6.2.12",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "mysql2": "^3.24.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

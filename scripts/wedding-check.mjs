@@ -1,74 +1,54 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
-import path from 'node:path';
 import Module from 'node:module';
+import path from 'node:path';
 import ts from 'typescript';
-import { recordStore } from '../lib/binary-records.mjs';
-
-// Compile the actual route sources and inject boundary dependencies only.
-function load(file, dependencies) {
-  const code = ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
-  const module = new Module(path.resolve(file));
-  const realRequire = module.require.bind(module);
-  module.require = name => name in dependencies ? dependencies[name] : realRequire(name);
-  module._compile(code, path.resolve(file));
-  return module.exports;
-}
-const env = { ...process.env }, originalFetch = globalThis.fetch;
-let user = { id: 11, login: 'test' }, upstreamStatus = 200;
-let upstream = { external_id: 'github-11', active_subscriptions: [] };
-process.env.APP_URL = 'http://localhost:3100';
-process.env.POLAR_ACCESS_TOKEN = 'test-token';
-process.env.POLAR_PRODUCT_ID = 'wedding-plan';
-process.env.POLAR_ENVIRONMENT = 'sandbox';
-globalThis.fetch = async (url, options) => {
-  assert.ok(String(url).startsWith('https://sandbox-api.polar.sh/v1/'));
-  assert.equal(options.cache, 'no-store');
-  return Response.json(upstream, { status: upstreamStatus });
+function load(file,deps) { const m=new Module(path.resolve(file));const req=m.require.bind(m);m.require=n=>n in deps?deps[n]:req(n);m._compile(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,path.resolve(file));return m.exports; }
+const data=new Map(), locks=new Set();let failCommit=false, failBillingSave=false, failLookup=false;
+const repo={readRecord:async k=>structuredClone(data.get(k)||null),writeRecord:async(k,v)=>{if(failBillingSave&&v.billing&&!v.charge){failBillingSave=false;throw new Error('billing write failure');}if(failCommit&&v.charge?.status==='paid'){failCommit=false;throw new Error('disk failure');}data.set(k,structuredClone(v));},recordNames:async()=>[...data.keys()],withRecordLock:async(k,fn)=>{if(locks.has(k))throw new Error('busy');locks.add(k);try{return await fn();}finally{locks.delete(k);}}};
+const env={...process.env}, originalFetch=globalThis.fetch;
+process.env.BILLING_ENCRYPTION_KEY='a'.repeat(64);process.env.TOSS_SECRET_KEY='test_sk';process.env.TOSS_CLIENT_KEY='test_ck';process.env.TOSS_AMOUNT_KRW='1000';
+let issue=0, charges=0;const upstream=new Map(), authorizationRequests=[];
+globalThis.fetch=async(url,options)=>{
+ const body=options.body?JSON.parse(options.body):null;
+ if(url.endsWith('authorizations/issue')){issue++;authorizationRequests.push(body.authKey);return Response.json({customerKey:body.customerKey,billingKey:'secret-billing-key'});}
+ if(url.includes('payments/orders/')){if(failLookup){failLookup=false;throw new Error('timeout');}const id=url.split('/').pop();return upstream.has(id)?Response.json(upstream.get(id)):Response.json({code:'NOT_FOUND_PAYMENT'},{status:404});}
+ assert.ok(url.includes('/billing/'));assert.equal(options.headers['Idempotency-Key'],body.orderId);
+ if(!upstream.has(body.orderId)){charges++;upstream.set(body.orderId,{orderId:body.orderId,status:'DONE',totalAmount:body.amount,currency:'KRW',paymentKey:'paid-'+charges});}
+ return Response.json(upstream.get(body.orderId));
 };
-const polar = load('lib/polar.ts', { 'server-only': {}, './local-testing': { localTestingEnabled: () => true } });
-const active = () => ({ product_id: 'wedding-plan', status: 'active', current_period_end: new Date(Date.now() + 86400000).toISOString(), cancel_at_period_end: false });
-const request = (method, body, origin = 'http://localhost:3100') => new Request('http://localhost:3100/api/invitations', { method, headers: { origin, 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
-const scratch = await mkdtemp(path.resolve('.wedding-test-'));
-const records = recordStore(scratch);
 try {
-  assert.equal((await polar.membership(11)).active, false);
-  upstream.active_subscriptions = [active()]; assert.equal((await polar.membership(11)).active, true);
-  upstream.active_subscriptions[0].product_id = 'other-plan'; assert.equal((await polar.membership(11)).active, false);
-  upstream.active_subscriptions = [{ ...active(), status: 'trialing' }]; assert.equal((await polar.membership(11)).active, false);
-  upstream.active_subscriptions = [{ ...active(), status: 'past_due' }]; assert.equal((await polar.membership(11)).active, false);
-  upstream.active_subscriptions = [{ ...active(), current_period_end: '2000-01-01T00:00:00Z' }]; assert.equal((await polar.membership(11)).active, false);
-  upstream.active_subscriptions = [{ ...active(), cancel_at_period_end: true }]; assert.equal((await polar.membership(11)).active, true);
-  upstream.external_id = 'github-99'; assert.equal((await polar.membership(11)).active, false); upstream.external_id = 'github-11';
-  upstreamStatus = 503; assert.equal((await polar.membership(11)).unavailable, true); upstreamStatus = 200;
-  const input = load('lib/invitation-input.ts', { './prompt-images': { validateImages: async value => value || [] } });
-  const common = { '@/lib/auth': { currentUser: async () => user }, '@/lib/polar': polar,
-    '@/lib/request-body': load('lib/request-body.ts', {}), '@/lib/invitation-input': input,
-    '@/lib/invitation-store': { getInvitation: id => records.read(id), saveInvitation: item => records.write(item.id, item) } };
-  const create = load('app/api/invitations/route.ts', common);
-  const edit = load('app/api/invitations/[id]/route.ts', common);
-  const body = { ownerId: 999, id: 'attacker', firstName: '서연', secondName: '도윤', date: '2027-05-22', time: '14:00', venue: '예식장', address: '서울', directions: '', message: '초대합니다.', theme: 'linen', images: [], published: false };
-  assert.equal((await create.POST(request('POST', body, 'https://evil.example'))).status, 403);
-  user = null; assert.equal((await create.POST(request('POST', body))).status, 401); user = { id: 11, login: 'test' };
-  upstream.active_subscriptions = []; assert.equal((await create.POST(request('POST', body))).status, 403);
-  upstream.active_subscriptions = [active()];
-  assert.equal((await create.POST(request('POST', { ...body, date: '2027-02-30' }))).status, 400);
-  const response = await create.POST(request('POST', body)); assert.equal(response.status, 201);
-  const item = await response.json(); assert.equal(item.ownerId, 11); assert.notEqual(item.id, body.id);
-  const context = { params: Promise.resolve({ id: item.id }) };
-  user = { id: 99, login: 'other' }; assert.equal((await edit.PATCH(request('PATCH', body), context)).status, 404); assert.equal((await edit.DELETE(request('DELETE'), context)).status, 404);
-  user = { id: 11, login: 'test' }; upstream.active_subscriptions = [];
-  assert.equal((await edit.PATCH(request('PATCH', body), context)).status, 403);
-  upstream.active_subscriptions = [active()]; assert.equal((await edit.PATCH(request('PATCH', { ...body, published: true }), context)).status, 200);
-  assert.equal((await records.read(item.id)).published, true);
-  upstream.active_subscriptions = []; assert.equal((await edit.DELETE(request('DELETE'), context)).status, 200);
-  assert.equal((await records.read(item.id)).published, false);
-  console.log('PASS: subscription/product/expiry checks, failed-lookup denial, CSRF, ownership, paid-only create/edit, cancel-period access, deletion without subscription, compressed persistence. No external charges.');
-} finally {
-  globalThis.fetch = originalFetch;
-  for (const key of Object.keys(process.env)) if (!(key in env)) delete process.env[key]; Object.assign(process.env, env);
-  // Only the exact temporary directory created for these isolated tests is removed.
-  assert.ok(path.basename(scratch).startsWith('.wedding-test-') && path.dirname(scratch) === process.cwd());
-  await rm(scratch, { recursive: true, force: true });
-}
+ const p=load('lib/payments.ts',{'server-only':{},'./repository':repo});
+ const order=await p.createPaymentOrder(11);assert.deepEqual(await p.createPaymentOrder(11),order);
+ assert.equal((await p.paymentStatus(11)).active,false);
+ await assert.rejects(p.completeSubscription(99,order.setupId,order.customerKey,'auth'));
+ failCommit=true;await assert.rejects(p.completeSubscription(11,order.setupId,order.customerKey,'auth'));
+ assert.equal(charges,1);assert.equal((await p.paymentStatus(11)).active,false);
+ await p.completeSubscription(11,order.setupId,order.customerKey,'auth');
+ await p.completeSubscription(11,order.setupId,order.customerKey,'auth');
+ assert.equal(charges,1);assert.equal(issue,1);assert.equal((await p.paymentStatus(11)).active,true);
+ assert.ok(!JSON.stringify([...data.values()]).includes('secret-billing-key'));
+ assert.equal(p.nextMonth('2028-01-31T12:00:00.000Z'),'2028-02-29T12:00:00.000Z');
+ const s=data.get('subscription-11');s.until='2020-01-01T00:00:00Z';await p.renewSubscriptions();assert.equal(charges,2);
+ await p.renewSubscriptions();assert.equal(charges,2);
+ await p.cancelSubscription(11);assert.equal((await p.paymentStatus(11)).cancelled,true);assert.equal((await p.paymentStatus(11)).active,true);
+ data.get('subscription-11').until='2020-01-01T00:00:00Z';await p.renewSubscriptions();assert.equal(charges,2);
+ const retry=await p.createPaymentOrder(31);failBillingSave=true;
+ await assert.rejects(p.completeSubscription(31,retry.setupId,retry.customerKey,'original-auth'));
+ await p.completeSubscription(31,retry.setupId,retry.customerKey,'different-auth');
+ assert.deepEqual(authorizationRequests.slice(-2),['original-auth','original-auth']);
+ assert.equal(charges,3);
+ const concurrent=await p.createPaymentOrder(44);
+ const outcomes=await Promise.allSettled([p.completeSubscription(44,concurrent.setupId,concurrent.customerKey,'auth'),p.completeSubscription(44,concurrent.setupId,concurrent.customerKey,'auth')]);
+ assert.equal(outcomes.filter(o=>o.status==='fulfilled').length,1);assert.equal(charges,4);
+ const cancelled=await p.createPaymentOrder(66);failLookup=true;
+ await assert.rejects(p.completeSubscription(66,cancelled.setupId,cancelled.customerKey,'auth'));
+ await p.cancelSubscription(66);await p.renewSubscriptions();assert.equal(charges,4);assert.equal((await p.paymentStatus(66)).active,false);
+ const g=load('lib/guestbook.ts',{'server-only':{},'./repository':repo});
+ const entry={id:'12345678-1234-1234-1234-123456789012',name:'Guest',message:'Congratulations',password:'pass1234'};
+ await g.addGuest('invite',entry);await g.addGuest('invite',entry);
+ const list=await g.listGuests('invite');assert.equal(list.length,1);assert.ok(!('hash' in list[0]));assert.ok(!('salt' in list[0]));
+ await assert.rejects(g.deleteGuest('invite',entry.id,'wrong',false));await g.deleteGuest('invite',entry.id,'pass1234',false);assert.equal((await g.listGuests('invite')).length,0);
+ await g.addGuest('invite',entry);await g.deleteGuest('invite',entry.id,'',true);
+ console.log('PASS: subscription setup reuse, ownership, replay, paid-write failure recovery without double charge, monthly renewal, cancellation, encrypted billing key, guestbook idempotency and password/owner deletion. No network or charges.');
+} finally {globalThis.fetch=originalFetch;for(const k of Object.keys(process.env))if(!(k in env))delete process.env[k];Object.assign(process.env,env);}

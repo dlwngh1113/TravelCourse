@@ -1,12 +1,12 @@
 import WeddingStudio from './wedding-studio';
 import { myInvitations } from '@/lib/invitation-store';
-import { membership, polarConfigured } from '@/lib/polar';
-import { currentUser, configured } from "@/lib/auth";
+import { paymentStatus, tossAmount, tossConfigured } from '@/lib/payments';
+import { currentUser, configured, githubConfigured, googleConfigured } from "@/lib/auth";
 import LocalTestBar from './local-test-bar';
 export const dynamic = "force-dynamic";
 export default async function Home() {
   const user = await currentUser();
-  const [items, status] = user ? await Promise.all([myInvitations(user.id), membership(user.id)]) : [[], { active: false, configured: polarConfigured() }];
+  const [items, status] = user ? await Promise.all([myInvitations(user.id), paymentStatus(user.id)]) : [[], { active: false, configured: tossConfigured(), amount: tossAmount() }];
   return (
     <>
     <LocalTestBar user={user}/>
@@ -14,6 +14,8 @@ export default async function Home() {
       initialItems={items}
       user={user}
       authReady={configured()}
+      githubReady={githubConfigured()}
+      googleReady={googleConfigured()}
       initialMembership={status}
     />
     </>
